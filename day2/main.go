@@ -1,51 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
+
+	"hoelz.ro/advent-of-code/2019/intcode"
 )
 
-func parseProgram(program string) []int {
-	var result []int
-
-	for _, opcodeStr := range strings.Split(program, ",") {
-		opcode, err := strconv.Atoi(opcodeStr)
-
-		if err != nil {
-			panic(err.Error())
-		}
-
-		result = append(result, opcode)
-	}
-
-	return result
-}
-
-func runProgram(program []int) {
-	ip := 0
-
-programLoop:
-	for {
-		opcode := program[ip]
-
-		switch opcode {
-		case 1:
-			program[program[ip+3]] = program[program[ip+1]] + program[program[ip+2]]
-			ip += 4
-		case 2:
-			program[program[ip+3]] = program[program[ip+1]] * program[program[ip+2]]
-			ip += 4
-		case 99:
-			break programLoop
-		}
-	}
-
-}
-
 func main() {
-	program := parseProgram(os.Args[1])
+	program := intcode.ParseProgram(os.Args[1])
 
 	pristineProgram := make([]int, len(program))
 	copy(pristineProgram, program)
@@ -55,7 +19,9 @@ func main() {
 	program[1] = 12
 	program[2] = 2
 
-	runProgram(program)
+	programInput := bufio.NewReader(os.Stdin)
+
+	intcode.RunProgram(programInput, program)
 
 	fmt.Println(program[0])
 
@@ -66,7 +32,7 @@ outerLoop:
 			copy(program, pristineProgram)
 			program[1] = noun
 			program[2] = verb
-			runProgram(program)
+			intcode.RunProgram(programInput, program)
 
 			if program[0] == 19690720 {
 				fmt.Println(100*noun + verb)
