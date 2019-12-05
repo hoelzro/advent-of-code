@@ -1,0 +1,3 @@
+/day*/*
+!/day*/*.go
+input*.txt
