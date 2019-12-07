@@ -1,8 +1,6 @@
 package intcode
 
 import (
-	"bufio"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -23,18 +21,6 @@ func ParseProgram(program string) []int {
 	return result
 }
 
-func readInteger(input *bufio.Reader) int {
-	line, _, err := input.ReadLine()
-	if err != nil {
-		panic("couldn't read integer: " + err.Error())
-	}
-	i, err := strconv.Atoi(string(line))
-	if err != nil {
-		panic("couldn't read integer: " + err.Error())
-	}
-	return i
-}
-
 const (
 	ModePosition  = 0
 	ModeImmediate = 1
@@ -49,7 +35,7 @@ func getValue(program []int, ip, mode int) int {
 	panic("Unrecognized mode")
 }
 
-func RunProgram(input *bufio.Reader, program []int) {
+func RunProgram(input <-chan int, output chan<- int, originalProgram []int) {
 	program := make([]int, len(originalProgram))
 	copy(program, originalProgram)
 
@@ -78,10 +64,14 @@ programLoop:
 			program[program[ip+3]] = getValue(program, ip+1, modes[1]) * getValue(program, ip+2, modes[2])
 			ip += 4
 		case 3:
-			program[program[ip+1]] = readInteger(input)
+			var ok bool
+			program[program[ip+1]], ok = <-input
+			if !ok {
+				break programLoop
+			}
 			ip += 2
 		case 4:
-			fmt.Println(getValue(program, ip+1, modes[1]))
+			output <- getValue(program, ip+1, modes[1])
 			ip += 2
 		case 5:
 			if getValue(program, ip+1, modes[1]) != 0 {
