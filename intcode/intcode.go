@@ -50,6 +50,9 @@ func getValue(program []int, ip, mode int) int {
 }
 
 func RunProgram(input *bufio.Reader, program []int) {
+	program := make([]int, len(originalProgram))
+	copy(program, originalProgram)
+
 	ip := 0
 
 programLoop:

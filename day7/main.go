@@ -51,10 +51,7 @@ func runAmplifiers(program []int, phaseSettings []int) int {
 		inputs <- phaseSetting
 		inputs <- previousOutput
 
-		programCopy := make([]int, len(program))
-		copy(programCopy, program)
-
-		intcode.RunProgram(inputs, outputs, programCopy)
+		intcode.RunProgram(inputs, outputs, program)
 		previousOutput = <-outputs
 	}
 
@@ -123,11 +120,8 @@ func runAmplifiersFeedback(program []int, phaseSettings []int) int {
 	for i := range phaseSettings {
 		wg.Add(1)
 
-		programCopy := make([]int, len(program))
-		copy(programCopy, program)
-
 		go func(i int) {
-			intcode.RunProgram(inputs[i], outputs[i], programCopy)
+			intcode.RunProgram(inputs[i], outputs[i], program)
 			close(outputs[i])
 			wg.Done()
 		}(i)
