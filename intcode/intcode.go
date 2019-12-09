@@ -26,13 +26,16 @@ func ParseProgram(program string) []int {
 const (
 	ModePosition  = 0
 	ModeImmediate = 1
+	ModeRelative  = 2
 )
 
-func getValue(program []int, ip, mode int) int {
+func getValue(program *[]int, ip, mode, relativeBase int) int {
 	if mode == ModePosition {
-		return program[program[ip]]
+		return (*program)[(*program)[ip]]
 	} else if mode == ModeImmediate {
-		return program[ip]
+		return (*program)[ip]
+	} else if mode == ModeRelative {
+		return (*program)[(*program)[ip]+relativeBase]
 	}
 	panic("Unrecognized mode")
 }
@@ -41,6 +44,7 @@ func RunProgram(input <-chan int, output chan<- int, originalProgram []int) {
 	program := make([]int, len(originalProgram))
 	copy(program, originalProgram)
 
+	relativeBase := 0
 	ip := 0
 
 programLoop:
@@ -53,6 +57,8 @@ programLoop:
 		for mode != 0 {
 			if mode%10 == 1 {
 				modes[param] = ModeImmediate
+			} else if mode%10 == 2 {
+				modes[param] = ModeRelative
 			}
 			mode /= 10
 			param++
@@ -60,10 +66,10 @@ programLoop:
 
 		switch opcode {
 		case 1:
-			program[program[ip+3]] = getValue(program, ip+1, modes[1]) + getValue(program, ip+2, modes[2])
+			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) + getValue(&program, ip+2, modes[2], relativeBase)
 			ip += 4
 		case 2:
-			program[program[ip+3]] = getValue(program, ip+1, modes[1]) * getValue(program, ip+2, modes[2])
+			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) * getValue(&program, ip+2, modes[2], relativeBase)
 			ip += 4
 		case 3:
 			var ok bool
@@ -73,34 +79,37 @@ programLoop:
 			}
 			ip += 2
 		case 4:
-			output <- getValue(program, ip+1, modes[1])
+			output <- getValue(&program, ip+1, modes[1], relativeBase)
 			ip += 2
 		case 5:
-			if getValue(program, ip+1, modes[1]) != 0 {
-				ip = getValue(program, ip+2, modes[2])
+			if getValue(&program, ip+1, modes[1], relativeBase) != 0 {
+				ip = getValue(&program, ip+2, modes[2], relativeBase)
 			} else {
 				ip += 3
 			}
 		case 6:
-			if getValue(program, ip+1, modes[1]) == 0 {
-				ip = getValue(program, ip+2, modes[2])
+			if getValue(&program, ip+1, modes[1], relativeBase) == 0 {
+				ip = getValue(&program, ip+2, modes[2], relativeBase)
 			} else {
 				ip += 3
 			}
 		case 7:
-			if getValue(program, ip+1, modes[1]) < getValue(program, ip+2, modes[2]) {
+			if getValue(&program, ip+1, modes[1], relativeBase) < getValue(&program, ip+2, modes[2], relativeBase) {
 				program[program[ip+3]] = 1
 			} else {
 				program[program[ip+3]] = 0
 			}
 			ip += 4
 		case 8:
-			if getValue(program, ip+1, modes[1]) == getValue(program, ip+2, modes[2]) {
+			if getValue(&program, ip+1, modes[1], relativeBase) == getValue(&program, ip+2, modes[2], relativeBase) {
 				program[program[ip+3]] = 1
 			} else {
 				program[program[ip+3]] = 0
 			}
 			ip += 4
+		case 9:
+			relativeBase += getValue(&program, ip+1, modes[1], relativeBase)
+			ip += 2
 		case 99:
 			break programLoop
 		default:
