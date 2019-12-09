@@ -1,8 +1,10 @@
 package intcode
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func ParseProgram(program string) []int {
@@ -105,5 +107,34 @@ programLoop:
 			panic("invalid opcode: " + strconv.Itoa(opcode))
 		}
 	}
+}
 
+func StdoutWriter(wg *sync.WaitGroup) chan<- int {
+	wg.Add(1)
+	ch := make(chan int, 10)
+
+	go func() {
+		for {
+			value, ok := <-ch
+			if !ok {
+				break
+			}
+			fmt.Println(value)
+		}
+		wg.Done()
+	}()
+
+	return ch
+}
+
+func ConstantReader(value int) <-chan int {
+	ch := make(chan int, 10)
+
+	go func() {
+		for {
+			ch <- value
+		}
+	}()
+
+	return ch
 }
