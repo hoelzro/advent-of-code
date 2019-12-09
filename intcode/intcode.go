@@ -29,12 +29,28 @@ const (
 	ModeRelative  = 2
 )
 
+// XXX use a map instead?
+func expandIfNeeded(program *[]int, index int) {
+	if index > 1000000 {
+		panic("I forbid you from growing beyond a megabyte")
+	}
+	if index >= len(*program) {
+		newProgram := make([]int, index+1)
+		copy(newProgram, *program)
+		*program = newProgram
+	}
+}
+
 func getValue(program *[]int, ip, mode, relativeBase int) int {
 	if mode == ModePosition {
+		expandIfNeeded(program, ip)
+		expandIfNeeded(program, (*program)[ip])
 		return (*program)[(*program)[ip]]
 	} else if mode == ModeImmediate {
+		expandIfNeeded(program, ip)
 		return (*program)[ip]
 	} else if mode == ModeRelative {
+		expandIfNeeded(program, ip+relativeBase)
 		return (*program)[(*program)[ip]+relativeBase]
 	}
 	panic("Unrecognized mode")
@@ -66,9 +82,13 @@ programLoop:
 
 		switch opcode {
 		case 1:
+			expandIfNeeded(&program, ip+3)
+			expandIfNeeded(&program, program[ip+3])
 			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) + getValue(&program, ip+2, modes[2], relativeBase)
 			ip += 4
 		case 2:
+			expandIfNeeded(&program, ip+3)
+			expandIfNeeded(&program, program[ip+3])
 			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) * getValue(&program, ip+2, modes[2], relativeBase)
 			ip += 4
 		case 3:
@@ -94,6 +114,8 @@ programLoop:
 				ip += 3
 			}
 		case 7:
+			expandIfNeeded(&program, ip+3)
+			expandIfNeeded(&program, program[ip+3])
 			if getValue(&program, ip+1, modes[1], relativeBase) < getValue(&program, ip+2, modes[2], relativeBase) {
 				program[program[ip+3]] = 1
 			} else {
@@ -101,6 +123,8 @@ programLoop:
 			}
 			ip += 4
 		case 8:
+			expandIfNeeded(&program, ip+3)
+			expandIfNeeded(&program, program[ip+3])
 			if getValue(&program, ip+1, modes[1], relativeBase) == getValue(&program, ip+2, modes[2], relativeBase) {
 				program[program[ip+3]] = 1
 			} else {
