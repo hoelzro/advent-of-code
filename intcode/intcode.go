@@ -56,6 +56,18 @@ func getValue(program *[]int, ip, mode, relativeBase int) int {
 	panic("Unrecognized mode")
 }
 
+func setValue(program *[]int, ip, mode, relativeBase, value int) {
+	if mode == ModePosition {
+		expandIfNeeded(program, (*program)[ip])
+		(*program)[(*program)[ip]] = value
+	} else if mode == ModeRelative {
+		expandIfNeeded(program, ip+relativeBase)
+		(*program)[(*program)[ip]+relativeBase] = value
+	} else {
+		panic("Unrecognized mode")
+	}
+}
+
 func RunProgram(input <-chan int, output chan<- int, originalProgram []int) {
 	program := make([]int, len(originalProgram))
 	copy(program, originalProgram)
@@ -84,19 +96,26 @@ programLoop:
 		case 1:
 			expandIfNeeded(&program, ip+3)
 			expandIfNeeded(&program, program[ip+3])
-			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) + getValue(&program, ip+2, modes[2], relativeBase)
+			setValue(&program, ip+3, modes[3], relativeBase,
+				getValue(&program, ip+1, modes[1], relativeBase)+getValue(&program, ip+2, modes[2], relativeBase))
 			ip += 4
 		case 2:
 			expandIfNeeded(&program, ip+3)
 			expandIfNeeded(&program, program[ip+3])
-			program[program[ip+3]] = getValue(&program, ip+1, modes[1], relativeBase) * getValue(&program, ip+2, modes[2], relativeBase)
+			setValue(&program, ip+3, modes[3], relativeBase,
+				getValue(&program, ip+1, modes[1], relativeBase)*getValue(&program, ip+2, modes[2], relativeBase))
 			ip += 4
 		case 3:
-			var ok bool
-			program[program[ip+1]], ok = <-input
+			expandIfNeeded(&program, ip+1)
+
+			value, ok := <-input
+
 			if !ok {
 				break programLoop
 			}
+
+			setValue(&program, ip+1, modes[1], relativeBase, value)
+
 			ip += 2
 		case 4:
 			output <- getValue(&program, ip+1, modes[1], relativeBase)
@@ -117,18 +136,18 @@ programLoop:
 			expandIfNeeded(&program, ip+3)
 			expandIfNeeded(&program, program[ip+3])
 			if getValue(&program, ip+1, modes[1], relativeBase) < getValue(&program, ip+2, modes[2], relativeBase) {
-				program[program[ip+3]] = 1
+				setValue(&program, ip+3, modes[3], relativeBase, 1)
 			} else {
-				program[program[ip+3]] = 0
+				setValue(&program, ip+3, modes[3], relativeBase, 0)
 			}
 			ip += 4
 		case 8:
 			expandIfNeeded(&program, ip+3)
 			expandIfNeeded(&program, program[ip+3])
 			if getValue(&program, ip+1, modes[1], relativeBase) == getValue(&program, ip+2, modes[2], relativeBase) {
-				program[program[ip+3]] = 1
+				setValue(&program, ip+3, modes[3], relativeBase, 1)
 			} else {
-				program[program[ip+3]] = 0
+				setValue(&program, ip+3, modes[3], relativeBase, 0)
 			}
 			ip += 4
 		case 9:
